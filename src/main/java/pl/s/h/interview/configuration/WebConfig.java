@@ -6,7 +6,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan({"pl.s.h.interview.controller"})
+@ComponentScan({"pl.s.h.interview.web"})
 public class WebConfig {
 
 }

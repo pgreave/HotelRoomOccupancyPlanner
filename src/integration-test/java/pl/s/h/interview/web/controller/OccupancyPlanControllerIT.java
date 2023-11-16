@@ -1,4 +1,4 @@
-package pl.s.h.interview.controller;
+package pl.s.h.interview.web.controller;
 
 import org.junit.jupiter.api.Test;
 import pl.s.h.interview.BaseIT;
@@ -8,6 +8,7 @@ import pl.s.h.interview.api.RoomAvailability;
 import pl.s.h.interview.api.RoomType;
 import pl.s.h.interview.api.ServiceError;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
@@ -51,6 +52,24 @@ class OccupancyPlanControllerIT extends BaseIT {
         assertThat(serviceError.message()).isEqualTo("Content-Type 'text/plain;charset=ISO-8859-1' is not supported.");
     }
 
+    @Test
+    void shouldReturnValidationErrorResponseWhenRequestHasPastPlanDate() {
+        final OccupancyPlanBuildRequest request = buildOccupancyPlanBuildRequestWithPastPlanDate();
+
+        final ErrorResponse response = given()
+                .contentType(JSON)
+                .body(request)
+                .when()
+                .post(OCCUPANCY_PLAN_BUILD_URI)
+                .then()
+                .statusCode(400)
+                .extract()
+                .as(ErrorResponse.class);
+
+        assertThat(response).isNotNull();
+        assertThat(response.errors()).hasSize(1);
+    }
+
     private static OccupancyPlanBuildRequest buildOccupancyPlanBuildRequest() {
         return OccupancyPlanBuildRequest.builder()
                 .planDate(LocalDate.now())
@@ -58,7 +77,17 @@ class OccupancyPlanControllerIT extends BaseIT {
                         .type(RoomType.ECONOMY)
                         .availableRooms(1)
                         .build())
-                .guestPriceProposalPerNight(0)
+                .guestPriceProposalPerNight(BigDecimal.ZERO)
+                .build();
+    }
+    private static OccupancyPlanBuildRequest buildOccupancyPlanBuildRequestWithPastPlanDate() {
+        return OccupancyPlanBuildRequest.builder()
+                .planDate(LocalDate.now().minusDays(1))
+                .roomAvailability(RoomAvailability.builder()
+                        .type(RoomType.ECONOMY)
+                        .availableRooms(1)
+                        .build())
+                .guestPriceProposalPerNight(BigDecimal.ZERO)
                 .build();
     }
 }
