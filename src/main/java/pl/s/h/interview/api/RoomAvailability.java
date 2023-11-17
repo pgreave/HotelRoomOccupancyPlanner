@@ -19,5 +19,5 @@ public record RoomAvailability(
 
         @NotNull
         @Min(0)
-        Integer availableRooms) {
+        long availableRooms) {
 }

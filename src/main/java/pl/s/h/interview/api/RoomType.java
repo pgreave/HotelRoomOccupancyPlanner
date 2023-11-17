@@ -2,13 +2,21 @@ package pl.s.h.interview.api;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
 
 import java.util.Arrays;
 
+@Getter
 public enum RoomType {
 
-    PREMIUM,
-    ECONOMY;
+    PREMIUM(100),
+    ECONOMY(1);
+
+    private final int priority;
+
+    RoomType(int priority) {
+        this.priority = priority;
+    }
 
     @JsonCreator
     public static RoomType fromValue(String value) {
@@ -22,4 +30,5 @@ public enum RoomType {
     public String getValue() {
         return this.name();
     }
+
 }

@@ -1,11 +1,13 @@
 package pl.s.h.interview.api;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import lombok.Builder;
 import lombok.Singular;
 import org.hibernate.validator.constraints.UUID;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.List;
  * @param planGenerationDate occupancy plan generation date and time
  */
 @Builder
+@Validated
 public record OccupancyPlanBuildResponse(
 
         @NotEmpty
@@ -30,5 +33,6 @@ public record OccupancyPlanBuildResponse(
 
         @NotNull
         @PastOrPresent
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
         LocalDateTime planGenerationDate) {
 }
