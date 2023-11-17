@@ -13,7 +13,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @Validated
-public class Plan {
+public class PlanContext {
     @NotNull
     private RoomType roomType;
     @Min(0)

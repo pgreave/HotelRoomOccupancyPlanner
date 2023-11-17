@@ -30,7 +30,7 @@ class OccupancyPlanServiceTest {
     private OccupancyPlanService sut;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         planIdGenerator = mock(PlanIdGenerator.class);
         occupancyPlanStrategy = mock(RoomOccupancyPlanStrategy.class);
         sut = new OccupancyPlanService(planIdGenerator, occupancyPlanStrategy);

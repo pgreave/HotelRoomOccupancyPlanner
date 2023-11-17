@@ -9,4 +9,5 @@ import java.util.List;
 public interface RoomOccupancyPlanStrategy {
 
     List<RoomOccupancyPlan> buildPlan(final List<RoomAvailability> roomAvailabilities, final List<BigDecimal> prices);
+
 }

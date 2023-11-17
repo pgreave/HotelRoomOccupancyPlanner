@@ -33,6 +33,7 @@ public record OccupancyPlanBuildResponse(
 
         @NotNull
         @PastOrPresent
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS", timezone = "UTC")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = DATE_TIME_FORMAT, timezone = "UTC")
         LocalDateTime planGenerationDate) {
+    public static final String DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS";
 }

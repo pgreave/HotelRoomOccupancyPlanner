@@ -1,7 +1,6 @@
 package pl.s.h.interview.service.planning.strategy;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import pl.s.h.interview.api.RoomAvailability;
 import pl.s.h.interview.api.RoomOccupancyPlan;
@@ -13,18 +12,61 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 class PriceThresholdOccupancyPlanStrategyTest {
 
     static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100.00);
 
     private PriceThresholdOccupancyPlanStrategy.PriceThresholdOccupancyPlanStrategyConfiguration configuration;
 
+    private RoomUpgradeOccupancyPlanStrategy upgradeOccupancyPlanStrategy;
+
     private PriceThresholdOccupancyPlanStrategy sut;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         configuration = createConfig(true);
-        sut = new PriceThresholdOccupancyPlanStrategy(configuration);
+        upgradeOccupancyPlanStrategy = mock(RoomUpgradeOccupancyPlanStrategy.class);
+        sut = new PriceThresholdOccupancyPlanStrategy(configuration, upgradeOccupancyPlanStrategy);
+
+        when(upgradeOccupancyPlanStrategy.apply(anyList())).then(invocation -> invocation.getArgument(0));
+    }
+
+    @Test
+    void shouldCallRoomUpgradeStrategyWhenEnabledByConfiguration() {
+        // given
+        configuration = createConfig(true);
+        sut = new PriceThresholdOccupancyPlanStrategy(configuration, upgradeOccupancyPlanStrategy);
+
+        // when
+        final List<RoomOccupancyPlan> result = sut.buildPlan(List.of(), List.of());
+
+        // then
+        RoomOccupancyPlansAssertion.assertThat(result)
+                .isNotNull();
+
+        verify(upgradeOccupancyPlanStrategy).apply(anyList());
+    }
+
+    @Test
+    void shouldNotCallRoomUpgradeStrategyWhenEnabledByConfiguration() {
+        // given
+        configuration = createConfig(false);
+        sut = new PriceThresholdOccupancyPlanStrategy(configuration, upgradeOccupancyPlanStrategy);
+
+        // when
+        final List<RoomOccupancyPlan> result = sut.buildPlan(List.of(), List.of());
+
+        // then
+        RoomOccupancyPlansAssertion.assertThat(result)
+                .isNotNull();
+
+        verifyNoInteractions(upgradeOccupancyPlanStrategy);
     }
 
     @Test
@@ -60,18 +102,6 @@ class PriceThresholdOccupancyPlanStrategyTest {
         testCorrectRoomOccupancyPlansCreation(given, expectedPremium, expectedEconomy);
     }
 
-    @Test
-    @Disabled
-    void shouldFullBookEconomyRoomsAndDoRoomUpgradeForTopPayingEconomyGuests() {
-        // given
-        Given given = new Given(10, 1);
-        Expected expectedPremium = new Expected(BigDecimal.valueOf(1153), 7);
-        Expected expectedEconomy = new Expected(BigDecimal.valueOf(45), 1);
-
-        // when & then
-        testCorrectRoomOccupancyPlansCreation(given, expectedPremium, expectedEconomy);
-    }
-
     void testCorrectRoomOccupancyPlansCreation(Given given, Expected expectedPremium, Expected expectedEconomy) {
         // given
         List<RoomAvailability> roomAvailabilities = createRoomAvailabilities(given.premiumRooms, given.economyRooms);
@@ -90,6 +120,8 @@ class PriceThresholdOccupancyPlanStrategyTest {
                 .hasRoomOccupancyPlanFor(RoomType.PREMIUM)
                 .withTotalEarnings(expectedPremium.earnings)
                 .withRoomsOccupied(expectedPremium.roomsOccupied);
+
+        verify(upgradeOccupancyPlanStrategy).apply(anyList());
     }
 
     private static List<RoomAvailability> createRoomAvailabilities(long premiumRooms, long economyRooms) {
@@ -118,23 +150,9 @@ class PriceThresholdOccupancyPlanStrategyTest {
         );
     }
 
-    static class Given {
-        final long premiumRooms;
-        final long economyRooms;
-
-        Given(long premiumRooms, long economyRooms) {
-            this.premiumRooms = premiumRooms;
-            this.economyRooms = economyRooms;
-        }
+    private record Given(long premiumRooms, long economyRooms) {
     }
 
-    static class Expected {
-        final BigDecimal earnings;
-        final long roomsOccupied;
-
-        Expected(BigDecimal earnings, long roomsOccupied) {
-            this.earnings = earnings;
-            this.roomsOccupied = roomsOccupied;
-        }
+    private record Expected(BigDecimal earnings, long roomsOccupied) {
     }
 }

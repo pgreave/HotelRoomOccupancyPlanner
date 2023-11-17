@@ -23,20 +23,32 @@ public class PriceThresholdOccupancyPlanStrategy implements RoomOccupancyPlanStr
 
     private final PriceThresholdOccupancyPlanStrategyConfiguration configuration;
 
+    private final RoomOccupancyPlanUpgradeStrategy upgradeOccupancyPlanStrategy;
+
     @Override
     public List<RoomOccupancyPlan> buildPlan(List<RoomAvailability> roomAvailabilities, List<BigDecimal> prices) {
         final Map<RoomType, Long> typeToAvailabilityMap = roomAvailabilities.stream()
                 .collect(Collectors.toMap(RoomAvailability::type, RoomAvailability::availableRooms));
 
-        return Arrays.stream(RoomType.values())
-                .map(roomType -> buildRoomOccupancyPlan(roomType, typeToAvailabilityMap, prices))
+        final List<PlanContext> planContexts = Arrays.stream(RoomType.values())
+                .map(roomType -> buildPlanContext(roomType, typeToAvailabilityMap, prices))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
+                .toList();
+
+        return postProcess(planContexts).stream()
                 .map(this::build)
                 .toList();
     }
 
-    private Optional<Plan> buildRoomOccupancyPlan(RoomType roomType, Map<RoomType, Long> typeToAvailabilityMap, List<BigDecimal> allPrices) {
+    protected List<PlanContext> postProcess(List<PlanContext> planContexts) {
+        if (configuration.allowUpgrades) {
+            return upgradeOccupancyPlanStrategy.apply(planContexts);
+        }
+        return planContexts;
+    }
+
+    protected Optional<PlanContext> buildPlanContext(RoomType roomType, Map<RoomType, Long> typeToAvailabilityMap, List<BigDecimal> allPrices) {
         return Optional.ofNullable(typeToAvailabilityMap.get(roomType))
                 .map(availableRooms -> {
                     final PricesSupplier pricesSupplier = buildPricesSupplier(allPrices, roomType);
@@ -45,31 +57,34 @@ public class PriceThresholdOccupancyPlanStrategy implements RoomOccupancyPlanStr
                     final long roomsOccupied = calcRoomOccupancy(availableRooms, numberOfGuests);
                     final long leftOverRooms = calcEmptyRooms(availableRooms, roomsOccupied);
                     final long leftOverGuests = calcGuestsWithoutRoom(numberOfGuests, roomsOccupied);
+                    final BigDecimal totalEarnings = calcTotalEarnings(pricesForRoomType, roomsOccupied);
 
-                    final BigDecimal totalEarnings = pricesForRoomType.stream()
-                            .limit(roomsOccupied)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                    return new Plan(roomType, roomsOccupied, totalEarnings, leftOverRooms, leftOverGuests, pricesForRoomType);
+                    return new PlanContext(roomType, roomsOccupied, totalEarnings, leftOverRooms, leftOverGuests, pricesForRoomType);
                 });
     }
 
-    private static long calcGuestsWithoutRoom(int numberOfGuests, long roomsOccupied) {
+    protected static BigDecimal calcTotalEarnings(List<BigDecimal> pricesForRoomType, long roomsOccupied) {
+        return pricesForRoomType.stream()
+                .limit(roomsOccupied)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    protected static long calcGuestsWithoutRoom(int numberOfGuests, long roomsOccupied) {
         return Math.max(0, numberOfGuests - roomsOccupied);
     }
 
-    private static long calcEmptyRooms(Long availableRooms, long roomsOccupied) {
+    protected static long calcEmptyRooms(Long availableRooms, long roomsOccupied) {
         return Math.max(0, (availableRooms - roomsOccupied));
     }
 
-    private static long calcRoomOccupancy(Long availableRooms, int availableGuests) {
+    protected static long calcRoomOccupancy(Long availableRooms, int availableGuests) {
         if (availableRooms > availableGuests) {
             return availableGuests;
         }
         return availableRooms;
     }
 
-    private PricesSupplier buildPricesSupplier(List<BigDecimal> prices, RoomType roomType) {
+    protected PricesSupplier buildPricesSupplier(List<BigDecimal> prices, RoomType roomType) {
         final RoomThresholdConfiguration roomThresholdConfiguration = configuration.roomThresholdConfigurations.get(roomType);
 
         requireNonNull(roomThresholdConfiguration, "Room threshold configuration not found for room type: " + roomType);
@@ -82,11 +97,11 @@ public class PriceThresholdOccupancyPlanStrategy implements RoomOccupancyPlanStr
                 .orElse(PricesSupplierFactory.byThresholdAbove(prices, rangeBottom));
     }
 
-    private RoomOccupancyPlan build(Plan plan) {
+    protected final RoomOccupancyPlan build(PlanContext planContext) {
         return RoomOccupancyPlan.builder()
-                .roomType(plan.getRoomType())
-                .totalEarnings(plan.getEarnings())
-                .roomsOccupied(plan.getRoomsOccupied())
+                .roomType(planContext.getRoomType())
+                .totalEarnings(planContext.getEarnings())
+                .roomsOccupied(planContext.getRoomsOccupied())
                 .build();
     }
 

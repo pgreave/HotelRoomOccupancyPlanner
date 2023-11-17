@@ -21,7 +21,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 public abstract class BaseIT {
 
     @LocalServerPort
-    private int port = 0;
+    private final int port = 0;
 
     @BeforeEach
     public void setupRestAssured() {
