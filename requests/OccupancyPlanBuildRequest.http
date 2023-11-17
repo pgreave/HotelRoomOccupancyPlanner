@@ -1,0 +1,29 @@
+### Send POST request with OccupancyPlanBuild
+POST {{baseUri}}/api/occupancy/plan/build
+Content-Type: application/json
+
+{
+  "planDate": "2023-11-19",
+  "roomAvailabilities": [
+    {
+      "type": "PREMIUM",
+      "availableRooms": 10
+    },
+    {
+      "type": "ECONOMY",
+      "availableRooms": 1
+    }
+  ],
+  "priceOptions": [
+    23,
+    45,
+    155,
+    374,
+    22,
+    99,
+    100,
+    101,
+    115,
+    209
+  ]
+}
